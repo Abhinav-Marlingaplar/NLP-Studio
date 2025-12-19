@@ -11,13 +11,12 @@
 
 ## Overview
 
-NLP Studio is a full-stack NLP platform built using the MERN stack and modern large language model tooling.  
-The application provides multiple NLP services through a single interface, including a Retrieval-Augmented Generation (RAG) chatbot, text paraphrasing, and text analytics.
+NLP Studio is a full-stack Natural Language Processing platform designed to deliver multiple AI-powered language services through a unified web interface. Built using the MERN stack and modern LLM tooling, the platform integrates Retrieval-Augmented Generation (RAG), paraphrasing, and text analytics into a cohesive, scalable system.
 
-The project focuses on building a production-ready AI system rather than a prototype, with emphasis on authentication, scalable architecture, and real-world deployment challenges such as CORS, token management, and environment-based configuration.
+Unlike a proof-of-concept prototype, this project emphasizes production-grade engineering practices, including secure authentication, modular backend architecture, cross-origin security, token lifecycle management, and real-world cloud deployment.
 
-Live Demo (Frontend): https://nlp-studio.vercel.app  
-Backend API: https://nlp-studio.onrender.com  
+🔗 Live Demo (Frontend): https://nlp-studio.vercel.app  
+⚙️ Backend API: https://nlp-studio.onrender.com  
 
 ---
 
@@ -84,3 +83,9 @@ NLP Studio demonstrates the design and deployment of a real-world, AI-driven web
 ## License
 
 This project is licensed under the MIT License. See the `LICENSE` file for more details.
+
+---
+
+## Author
+
+Abhinav Marlingaplar
