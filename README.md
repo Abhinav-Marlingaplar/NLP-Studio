@@ -66,12 +66,12 @@ This approach mirrors common patterns used in modern SaaS applications.
 ## Sample Screenshots of the Application Interface
 
 <div style="display: flex; justify-content: center;">
-    <img src="images/Landing.png" alt="Landing" width="300"/>
-    <img src="images/Dashboard.png" alt="Dashboard" width="300"/>
-    <img src="images/Rag.png" alt="Rag" width="300"/>
-    <img src="images/Paraphraser.png" alt="Paraphraser" width="300"/>
-    <img src="images/Analytics1.png" alt="Analytics1" width="300"/>
-    <img src="images/Analytics2.png" alt="Analytics2" width="300"/>
+    <img src="images/Landing.png" alt="Landing" width="400"/>
+    <img src="images/Dashboard.png" alt="Dashboard" width="400"/>
+    <img src="images/Rag.png" alt="Rag" width="400"/>
+    <img src="images/Paraphraser.png" alt="Paraphraser" width="400"/>
+    <img src="images/Analytics1.png" alt="Analytics1" width="400"/>
+    <img src="images/Analytics2.png" alt="Analytics2" width="400"/>
 </div>
 
 ---
