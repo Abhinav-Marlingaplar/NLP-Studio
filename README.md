@@ -1,6 +1,5 @@
 # NLP Studio – Multi-Service NLP Platform
 
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Stack](https://img.shields.io/badge/Stack-MERN-blue)
 ![Frontend](https://img.shields.io/badge/Frontend-React.js-blueviolet)
 ![Backend](https://img.shields.io/badge/Backend-Node.js%20%7C%20Express.js-black)
