@@ -7,7 +7,6 @@
 ![VectorDB](https://img.shields.io/badge/Vector%20Database-Supabase-green)
 ![LLM](https://img.shields.io/badge/LLM-Groq%20API-brightgreen)
 ![Embeddings](https://img.shields.io/badge/Embeddings-Xenova%20Transformers-orange)
-![Deployment](https://img.shields.io/badge/Deployment-Vercel%20%7C%20Render-black)
 
 ---
 
@@ -25,11 +24,11 @@ Backend API: https://nlp-studio.onrender.com
 
 ## Key Features
 
-- RAG-based chatbot that combines vector similarity search with LLM inference to answer user queries using custom context.
-- Paraphrasing and text analytics services exposed through a unified API design.
-- Secure authentication using JWT access tokens and HTTP-only refresh tokens.
-- Modular backend architecture allowing easy extension of additional NLP services.
-- Deployed cloud architecture with separate frontend and backend hosting, configured for cross-origin communication and SPA routing.
+- RAG Chatbot using Xenova Transformers for embeddings, Supabase Vector DB for semantic retrieval, and Groq LLM APIs to deliver context-aware, low-latency responses over custom knowledge.
+- Paraphrasing Service powered by Groq LLMs, enabling semantic-preserving text rewriting for content and productivity use cases.
+- Text Analytics Module leveraging LLM-based language understanding for tasks such as summarization and linguistic analysis.
+- Secure Authentication System implemented with JWT access tokens and HTTP-only refresh tokens, following production-grade session management practices.
+- Scalable Cloud Deployment with Vercel (frontend) and Render (backend), featuring modular APIs, CORS-secure communication, and SPA routing.
 
 ---
 
@@ -64,17 +63,25 @@ This approach mirrors common patterns used in modern SaaS applications.
 
 ---
 
-## Environment Variables
+## Sample Screenshots of the Application Interface
 
-### Backend (`/server/.env`)
+<div style="display: flex; justify-content: center;">
+    <img src="images/Landing.png" alt="Landing" width="300"/>
+    <img src="images/Dashboard.png" alt="Dashboard" width="300"/>
+    <img src="images/Rag.png" alt="Rag" width="300"/>
+    <img src="images/Paraphraser.png" alt="Paraphraser" width="300"/>
+    <img src="images/Analytics1.png" alt="Analytics1" width="300"/>
+    <img src="images/Analytics2.png" alt="Analytics2" width="300"/>
+</div>
 
-```env
-PORT=10000
-NODE_ENV=production
+---
 
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret_key
+## Conclusion
 
-GROQ_API_KEY=your_groq_api_key
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
+NLP Studio demonstrates the design and deployment of a real-world, AI-driven web application that integrates large language models, vector databases, and secure authentication within a full-stack architecture. The project emphasizes practical engineering decisions such as modular service design, production-ready authentication, and cloud deployment, reflecting patterns commonly used in modern AI-powered SaaS systems.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the `LICENSE` file for more details.
