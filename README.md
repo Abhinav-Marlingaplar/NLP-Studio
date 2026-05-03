@@ -3,89 +3,90 @@
 ![Stack](https://img.shields.io/badge/Stack-MERN-blue)
 ![Frontend](https://img.shields.io/badge/Frontend-React.js-blueviolet)
 ![Backend](https://img.shields.io/badge/Backend-Node.js%20%7C%20Express.js-black)
-![VectorDB](https://img.shields.io/badge/Vector%20Database-Supabase-green)
+![VectorDB](https://img.shields.io/badge/VectorDB-Supabase-green)
 ![LLM](https://img.shields.io/badge/LLM-Groq%20API-brightgreen)
-![Embeddings](https://img.shields.io/badge/Embeddings-Xenova%20Transformers-orange)
+![Cache](https://img.shields.io/badge/Cache-Redis%20Upstash-red)
+![Deploy](https://img.shields.io/badge/Deploy-Render%20%7C%20Vercel-black)
+
+🔗 [Live Demo](https://nlp-studio.vercel.app) · ⚙️ [Backend API](https://nlp-studio.onrender.com)
 
 ---
 
 ## Overview
 
-NLP Studio is a full-stack Natural Language Processing platform designed to deliver multiple AI-powered language services through a unified web interface. Built using the MERN stack and modern LLM tooling, the platform integrates Retrieval-Augmented Generation (RAG), paraphrasing, and text analytics into a cohesive, scalable system.
+NLP Studio is a full-stack AI-powered Natural Language Processing platform that delivers multiple language services through a unified web interface. Built on the MERN stack with Groq LLM APIs, it combines Retrieval-Augmented Generation, intelligent paraphrasing, and deep text analytics into a single cohesive application.
 
-Unlike a proof-of-concept prototype, this project emphasizes production-grade engineering practices, including secure authentication, modular backend architecture, cross-origin security, token lifecycle management, and real-world cloud deployment.
-
-🔗 Live Demo (Frontend): https://nlp-studio.vercel.app  
-⚙️ Backend API: https://nlp-studio.onrender.com  
+The platform is engineered for real-world deployment — featuring a service-layer architecture, Redis caching, JWT-based authentication, and an automated warm-up system designed to maintain availability on free-tier cloud infrastructure.
 
 ---
 
 ## Key Features
 
-- RAG Chatbot using Xenova Transformers for embeddings, Supabase Vector DB for semantic retrieval, and Groq LLM APIs to deliver context-aware, low-latency responses over custom knowledge.
-- Paraphrasing Service powered by Groq LLMs, enabling semantic-preserving text rewriting for content and productivity use cases.
-- Text Analytics Module leveraging LLM-based language understanding for tasks such as summarization and linguistic analysis.
-- Secure Authentication System implemented with JWT access tokens and HTTP-only refresh tokens, following production-grade session management practices.
-- Scalable Cloud Deployment with Vercel (frontend) and Render (backend), featuring modular APIs, CORS-secure communication, and SPA routing.
+### RAG Chatbot
+Upload one or more PDF documents and interact with them through a conversational interface. The system generates semantic embeddings using Xenova Transformers (MiniLM), stores them in Supabase Vector DB, and retrieves contextually relevant chunks to ground responses from the Groq LLM. Responses are cached in Redis to reduce latency on repeated queries.
+
+### Paraphrasing Service
+Rewrite any text while preserving its original meaning. Users can control the output through three parameters — tone (formal, casual, neutral), length (shorter, same, longer), and creativity level (0–1 scale). Powered by Groq's `llama-3.1-8b-instant` model.
+
+### Text Analytics
+Performs comprehensive multi-layer analysis on any input text. Returns a structured JSON report covering overall sentiment, aspect-level breakdown, key issues with severity ratings, identified strengths, potential risks, and actionable recommendations. Designed for product feedback, reviews, and content evaluation use cases.
+
+### Authentication System
+Production-grade JWT authentication with short-lived access tokens stored client-side and long-lived refresh tokens stored in HTTP-only cookies. Axios interceptors handle automatic token refresh transparently. CORS and cookie policies are configured for secure cross-origin communication between Vercel and Render.
+
+### Service Layer Architecture
+Business logic is fully decoupled from HTTP handling through a dedicated services layer. Each feature — RAG, paraphrase, analytics, and auth — has its own service file responsible for all logic, LLM calls, and data access. Controllers are thin and only handle request extraction and response sending.
+
+### Redis Caching
+Two cache layers are active across the RAG pipeline via Upstash Redis. Embedding vectors are cached for 24 hours and full LLM responses are cached per session for 1 hour. Cache misses fall back to the full pipeline gracefully without any errors.
+
+### Warm-Up System
+Exposes `/api/health` and `/api/warm-all` endpoints that ping MongoDB and Supabase to keep free-tier services active. Automated cron jobs via cron-job.org hit these endpoints every 10 minutes (server keep-alive) and every day at midnight (database warm-up), preventing Render sleep and Supabase inactivity pauses.
 
 ---
 
 ## Technologies Used
 
-| Technology | Purpose |
-|----------|--------|
-| MongoDB | Persistent storage for users and application data |
-| Express.js | REST API layer and authentication logic |
-| React.js (Vite) | Frontend single-page application |
-| Node.js | Backend runtime |
-| Groq API | LLM inference |
-| Xenova Transformers | Embedding generation |
-| Supabase Vector Database | Vector storage and semantic search for RAG |
-| JWT | Access and refresh token-based authentication |
-| Tailwind CSS | UI styling |
-| Vercel | Frontend deployment |
-| Render | Backend deployment |
+| Layer | Technology |
+|---|---|
+| Frontend | React.js, Vite, Tailwind CSS |
+| Backend | Node.js, Express.js |
+| Database | MongoDB Atlas |
+| Vector Database | Supabase |
+| LLM Inference | Groq API |
+| Embeddings | Xenova Transformers (MiniLM L6 v2) |
+| Caching | Redis via Upstash |
+| Authentication | JSON Web Tokens (JWT) |
+| Frontend Deployment | Vercel |
+| Backend Deployment | Render |
+| Cron Scheduling | cron-job.org |
 
 ---
 
-## Authentication Design
+## Screenshots
 
-The authentication system uses a standard production-grade JWT workflow:
-
-- Short-lived access tokens are issued on login and stored client-side.
-- Long-lived refresh tokens are stored as HTTP-only cookies.
-- Axios interceptors automatically refresh expired access tokens.
-- Cross-origin authentication is secured using strict CORS configuration and cookie policies.
-
-This approach mirrors common patterns used in modern SaaS applications.
-
----
-
-## Sample Screenshots of the Application Interface
-
-<div style="display: flex; justify-content: center;">
-    <img src="images/Landing.png" alt="Landing" width="400"/>
-    <img src="images/Dashboard.png" alt="Dashboard" width="400"/>
-    <img src="images/Rag.png" alt="Rag" width="400"/>
-    <img src="images/Paraphraser.png" alt="Paraphraser" width="400"/>
-    <img src="images/Analytics1.png" alt="Analytics1" width="400"/>
-    <img src="images/Analytics2.png" alt="Analytics2" width="400"/>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;">
+  <img src="images/landing.png" alt="Landing Page" width="400"/>
+  <img src="images/dashboard.png" alt="Dashboard" width="400"/>
+  <img src="images/rag.png" alt="RAG Chatbot" width="400"/>
+  <img src="images/paraphraser.png" alt="Paraphraser" width="400"/>
+  <img src="images/analytics1.png" alt="Text Analytics" width="400"/>
+  <img src="images/analytics2.png" alt="Analytics Detail" width="400"/>
 </div>
 
 ---
 
 ## Conclusion
 
-NLP Studio demonstrates the design and deployment of a real-world, AI-driven web application that integrates large language models, vector databases, and secure authentication within a full-stack architecture. The project emphasizes practical engineering decisions such as modular service design, production-ready authentication, and cloud deployment, reflecting patterns commonly used in modern AI-powered SaaS systems.
+NLP Studio demonstrates the end-to-end design and deployment of a production-ready, AI-driven web application. It integrates large language models, vector databases, semantic search, and secure authentication within a clean full-stack architecture. The latest version introduces a service layer for maintainability, Redis caching for performance, and an automated warm-up infrastructure to ensure consistent availability — reflecting engineering practices used in modern AI-powered SaaS products.
 
 ---
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
-
----
+This project is licensed under the MIT License. See the `LICENSE` file for details.
 
 ## Author
 
-Abhinav Marlingaplar
+**Abhinav Marlingaplar**
+[GitHub](https://github.com/Abhinav-Marlingaplar)
