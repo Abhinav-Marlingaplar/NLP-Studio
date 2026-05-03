@@ -70,8 +70,8 @@ Exposes `/api/health` and `/api/warm-all` endpoints that ping MongoDB and Supaba
   <img src="images/dashboard.png" alt="Dashboard" width="400"/>
   <img src="images/rag.png" alt="RAG Chatbot" width="400"/>
   <img src="images/paraphraser.png" alt="Paraphraser" width="400"/>
-  <img src="images/analytics1.png" alt="Text Analytics" width="400"/>
-  <img src="images/analytics2.png" alt="Analytics Detail" width="400"/>
+  <img src="images/analytics-1.png" alt="Text Analytics" width="400"/>
+  <img src="images/analytics-2.png" alt="Analytics Detail" width="400"/>
 </div>
 
 ---
