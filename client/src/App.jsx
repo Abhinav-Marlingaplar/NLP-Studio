@@ -24,31 +24,42 @@ const App = () => {
     if (!token && !savedToken) return <Navigate to="/" replace />; // redirect to landing page
     return children;
   };
-  
+
 
   return (
     <div className="min-h-screen bg-gray-50">
-      
+
       {/* ✅ GLOBAL TOAST INITIALIZATION (ONLY ONCE) */}
       <Toaster
         position="top-right"
         toastOptions={{
           duration: 3000,
           style: {
-            background: "#1f1f1f",
-            color: "#fff",
-            border: "1px solid #f97316",
+            background: "#141414",
+            color: "rgba(255,255,255,0.85)",
+            border: "1px solid rgba(255,255,255,0.09)",
+            borderRadius: "10px",
+            fontSize: "13px",
+            fontFamily: "'DM Sans', sans-serif",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+            padding: "12px 16px",
           },
           success: {
             iconTheme: {
-              primary: "#f97316",
-              secondary: "#000",
+              primary: "#F5C842",
+              secondary: "#141414",
             },
           },
           error: {
             iconTheme: {
               primary: "#ef4444",
-              secondary: "#000",
+              secondary: "#141414",
+            },
+          },
+          loading: {
+            iconTheme: {
+              primary: "#F5C842",
+              secondary: "#141414",
             },
           },
         }}

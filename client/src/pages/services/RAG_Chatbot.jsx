@@ -17,7 +17,6 @@ const fadeUp = {
 
 const RAG_Chatbot = () => {
   const location = useLocation();
-
   const [messages, setMessages] = useState([]);
   const [sessionId, setSessionId] = useState(null);
   const [attachedFiles, setAttachedFiles] = useState([]);
@@ -33,10 +32,7 @@ const RAG_Chatbot = () => {
     localStorage.setItem("rag_session_id", s);
   }, [location.search]);
 
-  const LS_MESSAGES = useMemo(
-    () => (sessionId ? `rag_messages_${sessionId}` : null),
-    [sessionId]
-  );
+  const LS_MESSAGES = useMemo(() => sessionId ? `rag_messages_${sessionId}` : null, [sessionId]);
 
   useEffect(() => {
     if (!LS_MESSAGES) return;
@@ -55,9 +51,7 @@ const RAG_Chatbot = () => {
   const resetSession = () => {
     if (LS_MESSAGES) localStorage.removeItem(LS_MESSAGES);
     localStorage.removeItem("rag_session_id");
-    setMessages([]);
-    setSessionId(null);
-    setAttachedFiles([]);
+    setMessages([]); setSessionId(null); setAttachedFiles([]);
     toast.success("Session reset");
   };
 
@@ -82,26 +76,17 @@ const RAG_Chatbot = () => {
 
   const handleFilesSelect = async (files) => {
     if (!files?.length) return;
-
     setUploading(true);
     toast.loading("Uploading & indexing…", { id: "upload" });
-
-    appendMessage({
-      sender: "system",
-      text: `Uploading ${files.length} document(s)...`,
-    });
+    appendMessage({ sender: "system", text: `Uploading ${files.length} document(s)...` });
 
     try {
       const res = await uploadFilesForIndexing(files);
       setSessionId(res.sessionId);
       localStorage.setItem("rag_session_id", res.sessionId);
       setAttachedFiles(files.map(f => f.name));
-
       toast.success("Documents indexed", { id: "upload" });
-      appendMessage({
-        sender: "system",
-        text: "Documents indexed successfully. You can now ask questions.",
-      });
+      appendMessage({ sender: "system", text: "Documents indexed successfully. You can now ask questions." });
     } catch {
       toast.error("Indexing failed", { id: "upload" });
     }
@@ -109,35 +94,76 @@ const RAG_Chatbot = () => {
   };
 
   return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={fadeUp}
-      transition={{ duration: 0.5 }}
-      className="h-full flex flex-col rounded-2xl
-                 bg-white/5 backdrop-blur-xl
-                 border border-white/20
-                 shadow-xl shadow-black/40
-                 p-6 text-white"
-    >
+    <motion.div initial="hidden" animate="visible" variants={fadeUp} transition={{ duration: 0.5 }}
+                className="h-full flex flex-col rounded-2xl p-6"
+                style={{
+                  fontFamily: "'DM Sans', sans-serif",
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                  backdropFilter: 'blur(20px)',
+                  boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
+                }}>
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@700&display=swap');
+        .font-display { font-family: 'Playfair Display', serif; }
+        .gold-text {
+          background: linear-gradient(135deg, #F5C842, #E8A020);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+        .action-btn-primary {
+          flex: 1;
+          padding: 11px;
+          border-radius: 10px;
+          background: linear-gradient(135deg, #F5C842 0%, #E8A020 100%);
+          color: #080808;
+          font-weight: 600;
+          font-size: 13px;
+          border: none;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-family: 'DM Sans', sans-serif;
+        }
+        .action-btn-primary:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(245,200,66,0.25); }
+        .action-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .action-btn-secondary {
+          padding: 11px 20px;
+          border-radius: 10px;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+          color: rgba(255,255,255,0.6);
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-family: 'DM Sans', sans-serif;
+        }
+        .action-btn-secondary:hover { background: rgba(255,255,255,0.08); color: white; }
+      `}</style>
+
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-3xl font-bold text-orange-500">
-          AI Chatbot (RAG)
-        </h2>
-        <Link
-          to="/app/dashboard"
-          className="px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 transition"
-        >
-          Back
+      <div className="flex justify-between items-center mb-5">
+        <div>
+          <p className="text-[10px] font-semibold tracking-[0.18em] uppercase mb-1" style={{ color: 'rgba(245,200,66,0.7)' }}>
+            Tool
+          </p>
+          <h2 className="font-display text-2xl font-bold gold-text">AI Chatbot</h2>
+        </div>
+        <Link to="/app/dashboard"
+              className="px-4 py-2 rounded-lg text-xs font-medium transition-all hover:-translate-y-0.5"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}>
+          ← Dashboard
         </Link>
       </div>
 
+      {/* DIVIDER */}
+      <div className="h-px mb-5" style={{ background: 'rgba(255,255,255,0.06)' }} />
+
       {/* DESCRIPTION */}
-      <p className="text-gray-300 mb-6 max-w-3xl">
-        Ask intelligent questions over your uploaded documents using
-        Retrieval-Augmented Generation. Ideal for document-based Q&A,
-        research, and knowledge exploration.
+      <p className="text-xs leading-relaxed mb-5 font-light" style={{ color: 'rgba(255,255,255,0.45)' }}>
+        Ask intelligent questions over your uploaded documents using Retrieval-Augmented Generation.
+        Ideal for document-based Q&A, research, and knowledge exploration.
       </p>
 
       {/* FILE UPLOAD */}
@@ -145,50 +171,33 @@ const RAG_Chatbot = () => {
 
       {/* ATTACHED FILES */}
       {attachedFiles.length > 0 && (
-        <div className="mt-3 text-sm text-gray-300">
-          <strong>Attached documents:</strong>
-          <ul className="list-disc ml-5 mt-1">
-            {attachedFiles.map((f, i) => (
-              <li key={i}>{f}</li>
-            ))}
-          </ul>
+        <div className="mt-3 p-3 rounded-xl text-xs font-light"
+             style={{ background: 'rgba(245,200,66,0.05)', border: '1px solid rgba(245,200,66,0.15)', color: 'rgba(255,255,255,0.6)' }}>
+          <span className="font-semibold" style={{ color: '#F5C842' }}>Indexed:</span>{" "}
+          {attachedFiles.join(", ")}
         </div>
       )}
 
       {/* CHAT OUTPUT */}
-      <div className="flex-grow overflow-y-auto mt-6">
-        <OutputBox messages={messages} />
+      <div className="flex-grow overflow-y-auto mt-5">
+        <OutputBox messages={messages} icon="◈" />
         {(loading || uploading) && <Loading />}
       </div>
 
       {/* INPUT */}
-      <InputBox
-        value={input}
-        onChange={setInput}
-        onSubmit={handleSendMessage}
-        disabled={loading || uploading || !sessionId}
-        placeholder="Ask a question about your documents…"
-      />
+      <InputBox value={input} onChange={setInput} onSubmit={handleSendMessage}
+                disabled={loading || uploading || !sessionId}
+                placeholder="Ask a question about your documents…" />
 
       {/* ACTIONS */}
       <div className="flex gap-2 mt-3">
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          transition={{ type: "spring", stiffness: 260 }}
-          onClick={handleSendMessage}
-          className="flex-1 bg-orange-600 py-2 rounded-lg hover:bg-orange-700 transition"
-        >
-          Send
-        </motion.button>
-
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          transition={{ type: "spring", stiffness: 260 }}
-          onClick={resetSession}
-          className="bg-white/20 px-4 py-2 rounded-lg hover:bg-white/20 transition"
-        >
+        <button onClick={handleSendMessage} className="action-btn-primary"
+                disabled={loading || uploading || !sessionId}>
+          Send Message
+        </button>
+        <button onClick={resetSession} className="action-btn-secondary">
           Reset
-        </motion.button>
+        </button>
       </div>
     </motion.div>
   );

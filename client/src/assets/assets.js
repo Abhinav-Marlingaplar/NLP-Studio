@@ -1,5 +1,5 @@
-import logo from './logo.svg'
-import nlpstudio from './nlp-studio.svg'
+import logo from './logo.png'
+import nlpstudio from './nlp-studio.png'
 import background from './background.jpg'
 import githubIcon from './githubIcon.png'
 import linkedinIcon from './linkedinIcon.png'
