@@ -7,46 +7,64 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true); // 👈 add loading state
 
-  // Restore session on mount — but ONLY if user logged in this browser session
   useEffect(() => {
-    const shouldRestore = sessionStorage.getItem("isLoggedIn"); // 👈 flag check
-    if (!shouldRestore) return; // cold open = skip, force fresh login
+    const shouldRestore = sessionStorage.getItem("isLoggedIn");
 
-    // Try to get a new access token using the refresh cookie
-    axios.post("/api/auth/refresh", {}, { withCredentials: true })
+    // ✅ Refresh = same tab = sessionStorage still has flag = restore session
+    // ✅ New tab/browser open = sessionStorage cleared = skip = force login
+    if (!shouldRestore) {
+      setLoading(false); // 👈 nothing to restore, mark as done
+      return;
+    }
+
+    // Flag exists — try to get fresh access token via cookie
+    axios.post(
+      `${import.meta.env.VITE_API_URL}/api/auth/refresh`,
+      {},
+      { withCredentials: true }
+    )
       .then(res => {
         setToken(res.data.accessToken);
-
-        const savedUser = sessionStorage.getItem("authUser"); // 👈 sessionStorage
+        const savedUser = sessionStorage.getItem("authUser");
         if (savedUser) setUser(JSON.parse(savedUser));
       })
       .catch(() => {
-        // Refresh failed — clear everything and force login
+        // Cookie expired or invalid — force fresh login
         sessionStorage.removeItem("isLoggedIn");
         sessionStorage.removeItem("authUser");
         setToken(null);
         setUser(null);
-      });
+      })
+      .finally(() => setLoading(false)); // 👈 always mark as done
   }, []);
 
   const login = (tokenValue, userData = null) => {
     setToken(tokenValue);
-    sessionStorage.setItem("isLoggedIn", "true"); // 👈 set flag on login
+    sessionStorage.setItem("isLoggedIn", "true");  // ✅ set flag on login
 
     if (userData) {
       setUser(userData);
-      sessionStorage.setItem("authUser", JSON.stringify(userData)); // 👈 sessionStorage
+      sessionStorage.setItem("authUser", JSON.stringify(userData));
     }
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
-    sessionStorage.removeItem("isLoggedIn");  // 👈 clear flag
-    sessionStorage.removeItem("authUser");    // 👈 sessionStorage
-    axios.post("/api/auth/logout", {}, { withCredentials: true }); // 👈 revoke server-side
+    sessionStorage.removeItem("isLoggedIn");
+    sessionStorage.removeItem("authUser");
+    axios.post(
+      `${import.meta.env.VITE_API_URL}/api/auth/logout`,
+      {},
+      { withCredentials: true }
+    );
   };
+
+  // 👇 Don't render children until auth state is resolved
+  // Without this, protected routes flash as logged-out on every refresh
+  if (loading) return null;
 
   const value = {
     token,
@@ -56,5 +74,9 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!token,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
