@@ -1,13 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { analyzeText } from "../../api/analytics";
+import { useAuth } from "../../context/AuthContext";   // 👈 added
 import InputBox from "../../components/InputBox";
 import OutputBox from "../../components/OutputBox";
 import Loading from "../../components/Loading";
 import toast from "react-hot-toast";
-
-const LS_MESSAGES = "analytics_messages";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -15,26 +14,37 @@ const fadeUp = {
 };
 
 const Analytics = () => {
+  const { user } = useAuth();                          // 👈 added
+  const userId = user?.id;                             // 👈 added
+
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // ✅ Key scoped to userId
+  const LS_MESSAGES = useMemo(
+    () => userId ? `analytics_messages_${userId}` : null,
+    [userId]
+  );
+
   useEffect(() => {
+    if (!LS_MESSAGES) return;
+    // ✅ Only loads this user's own messages
     const saved = localStorage.getItem(LS_MESSAGES);
     if (saved) setMessages(JSON.parse(saved));
-  }, []);
+  }, [LS_MESSAGES]);
 
   const appendMessage = (msg) => {
     setMessages(prev => {
       const next = [...prev, msg];
-      localStorage.setItem(LS_MESSAGES, JSON.stringify(next));
+      if (LS_MESSAGES) localStorage.setItem(LS_MESSAGES, JSON.stringify(next));
       return next;
     });
   };
 
   const reset = () => {
     setMessages([]);
-    localStorage.removeItem(LS_MESSAGES);
+    if (LS_MESSAGES) localStorage.removeItem(LS_MESSAGES);  // ✅ only clears this user's data
     toast.success("Analysis history cleared");
   };
 
