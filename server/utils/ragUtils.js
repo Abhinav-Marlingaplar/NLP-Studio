@@ -21,6 +21,7 @@ export const indexDocumentText = async (text, metadata) => {
     doc_id: docId,
     content: chunk,
     metadata: { ...metadata, doc_id: docId },
+    user_id: userId,
     embedding: embeddings[i]
   }));
 
@@ -34,7 +35,8 @@ export const queryVectorsGrouped = async (queryEmbedding, sessionId, topK = 5) =
   const { data, error } = await supabase.rpc("match_documents", {
     query_embedding: queryEmbedding,
     match_count: topK,
-    filter_session: sessionId
+    filter_session: sessionId,
+    filter_user: userId
   });
 
   if (error) throw error;

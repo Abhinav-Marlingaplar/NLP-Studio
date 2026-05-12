@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 
+import { useAuth } from "../../context/AuthContext";   // 👈 import auth
 import { sendChatMessage } from "../../api/chat";
 import { uploadFilesForIndexing } from "../../api/upload";
 import InputBox from "../../components/InputBox";
@@ -17,6 +18,9 @@ const fadeUp = {
 
 const RAG_Chatbot = () => {
   const location = useLocation();
+  const { user } = useAuth();                          // 👈 get current user
+  const userId = user?.id;                             // 👈 scope key to this user
+
   const [messages, setMessages] = useState([]);
   const [sessionId, setSessionId] = useState(null);
   const [attachedFiles, setAttachedFiles] = useState([]);
@@ -24,18 +28,43 @@ const RAG_Chatbot = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  useEffect(() => {
-    const urlSession = new URLSearchParams(location.search).get("session");
-    let s = urlSession || localStorage.getItem("rag_session_id");
-    if (!s) s = crypto.randomUUID();
-    setSessionId(s);
-    localStorage.setItem("rag_session_id", s);
-  }, [location.search]);
+  // ✅ All keys now scoped to userId — different users never collide
+  const SESSION_KEY = useMemo(() => userId ? `rag_session_id_${userId}` : null, [userId]);
 
-  const LS_MESSAGES = useMemo(() => sessionId ? `rag_messages_${sessionId}` : null, [sessionId]);
+  useEffect(() => {
+    if (!userId) return;                               // 👈 wait until user is known
+
+    const urlSession = new URLSearchParams(location.search).get("session");
+
+    // If coming from dashboard history click — use that sessionId
+    // If opening fresh from tool card — start a new session, don't load old one
+    if (urlSession) {
+      setSessionId(urlSession);
+    } else {
+      // Fresh open — generate new session, don't load previous user's session
+      const newSession = crypto.randomUUID();
+      setSessionId(newSession);
+    }
+  }, [location.search, userId]);                      // 👈 re-run if user changes
+
+  // ✅ Message key scoped to both userId AND sessionId
+  const LS_MESSAGES = useMemo(
+    () => (userId && sessionId) ? `rag_messages_${userId}_${sessionId}` : null,
+    [userId, sessionId]
+  );
 
   useEffect(() => {
     if (!LS_MESSAGES) return;
+
+    const urlSession = new URLSearchParams(location.search).get("session");
+
+    // ✅ Only load saved messages if user explicitly clicked a history item
+    // Fresh tool card open = empty chat always
+    if (!urlSession) {
+      setMessages([]);
+      return;
+    }
+
     const saved = localStorage.getItem(LS_MESSAGES);
     if (saved) setMessages(JSON.parse(saved));
   }, [LS_MESSAGES]);
@@ -50,8 +79,11 @@ const RAG_Chatbot = () => {
 
   const resetSession = () => {
     if (LS_MESSAGES) localStorage.removeItem(LS_MESSAGES);
-    localStorage.removeItem("rag_session_id");
-    setMessages([]); setSessionId(null); setAttachedFiles([]);
+    if (SESSION_KEY) localStorage.removeItem(SESSION_KEY);
+    const newSession = crypto.randomUUID();
+    setSessionId(newSession);
+    setMessages([]);
+    setAttachedFiles([]);
     toast.success("Session reset");
   };
 
@@ -83,7 +115,8 @@ const RAG_Chatbot = () => {
     try {
       const res = await uploadFilesForIndexing(files);
       setSessionId(res.sessionId);
-      localStorage.setItem("rag_session_id", res.sessionId);
+      // ✅ Save new sessionId scoped to this user
+      if (SESSION_KEY) localStorage.setItem(SESSION_KEY, res.sessionId);
       setAttachedFiles(files.map(f => f.name));
       toast.success("Documents indexed", { id: "upload" });
       appendMessage({ sender: "system", text: "Documents indexed successfully. You can now ask questions." });
