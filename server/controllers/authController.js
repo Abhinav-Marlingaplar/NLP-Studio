@@ -53,20 +53,23 @@ export const login = async (req, res, next) => {
   }
 };
 
-export const refresh = (req, res) => {
+export const refresh = async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) return res.status(401).json({ message: "No refresh token" });
 
-  if (!refreshToken)
-    return res.status(401).json({ message: "No refresh token" });
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
 
-  jwt.verify(refreshToken, process.env.REFRESH_SECRET, (err, decoded) => {
-    if (err)
-      return res.status(403).json({ message: "Invalid or expired refresh token" });
+    const user = await User.findById(decoded.userId);
+    if (!user || user.refreshToken !== refreshToken) {
+      return res.status(403).json({ message: "Token revoked or invalid" });
+    }
 
     const newAccessToken = generateAccessToken(decoded.userId);
-
     return res.json({ accessToken: newAccessToken });
-  });
+  } catch (err) {
+    return res.status(403).json({ message: "Invalid or expired refresh token" });
+  }
 };
 
 export const me = async (req, res, next) => {
@@ -82,8 +85,9 @@ export const me = async (req, res, next) => {
 
 export const logout = async (req, res, next) => {
   try {
+    await User.findByIdAndUpdate(req.userId, { refreshToken: null });
+    
     res.clearCookie("refreshToken");
-
     res.json({ message: "Logged out successfully" });
   } catch (err) {
     next(err);

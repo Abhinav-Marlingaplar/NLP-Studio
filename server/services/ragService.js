@@ -4,13 +4,13 @@ import { queryVectorsGrouped } from "../utils/ragUtils.js";
 import redis from "../config/redis.js";
 
 const EMBED_TTL = 86400;   // 24 hours
-const RAG_TTL   = 3600;    // 1 hour
+const RAG_TTL = 3600;    // 1 hour
 
 /**
  * Returns a cached embedding or computes + caches a new one.
  */
 const getCachedEmbedding = async (text) => {
-  const key = `embed:${text}`;
+  const key = `embed:${sessionId}:${text}`;
   try {
     const cached = await redis.get(key);
     if (cached) return JSON.parse(cached);
@@ -36,7 +36,7 @@ export const ragChat = async ({ message, sessionId, userId }) => {
     };
   }
 
-  const cacheKey = `rag:${sessionId}:${message}`;
+  const cacheKey = `rag:${userId}:${sessionId}:${message}`;
 
   // 1. Cache hit
   try {
