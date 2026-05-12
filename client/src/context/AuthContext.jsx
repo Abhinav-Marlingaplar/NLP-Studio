@@ -7,19 +7,16 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // 👈 add loading state
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const shouldRestore = sessionStorage.getItem("isLoggedIn");
 
-    // ✅ Refresh = same tab = sessionStorage still has flag = restore session
-    // ✅ New tab/browser open = sessionStorage cleared = skip = force login
     if (!shouldRestore) {
-      setLoading(false); // 👈 nothing to restore, mark as done
+      setLoading(false);
       return;
     }
 
-    // Flag exists — try to get fresh access token via cookie
     axios.post(
       `${import.meta.env.VITE_API_URL}/api/auth/refresh`,
       {},
@@ -31,19 +28,17 @@ export const AuthProvider = ({ children }) => {
         if (savedUser) setUser(JSON.parse(savedUser));
       })
       .catch(() => {
-        // Cookie expired or invalid — force fresh login
         sessionStorage.removeItem("isLoggedIn");
         sessionStorage.removeItem("authUser");
         setToken(null);
         setUser(null);
       })
-      .finally(() => setLoading(false)); // 👈 always mark as done
+      .finally(() => setLoading(false));
   }, []);
 
   const login = (tokenValue, userData = null) => {
     setToken(tokenValue);
-    sessionStorage.setItem("isLoggedIn", "true");  // ✅ set flag on login
-
+    sessionStorage.setItem("isLoggedIn", "true");
     if (userData) {
       setUser(userData);
       sessionStorage.setItem("authUser", JSON.stringify(userData));
@@ -62,16 +57,15 @@ export const AuthProvider = ({ children }) => {
     );
   };
 
-  // 👇 Don't render children until auth state is resolved
-  // Without this, protected routes flash as logged-out on every refresh
-  if (loading) return null;
-
+  // ✅ REMOVED the early null return — always render the Provider
+  // ✅ ADDED loading to the value object so App.jsx can read it
   const value = {
     token,
     user,
     login,
     logout,
     isAuthenticated: !!token,
+    loading,  // 👈 this was missing
   };
 
   return (
