@@ -1,42 +1,51 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import axios from "axios";
 
-// Create Context
 const AuthContext = createContext();
-
-// Custom Hook
 export const useAuth = () => useContext(AuthContext);
 
-// Provider Component
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
-  const [user, setUser] = useState(null); // optional user details
+  const [user, setUser] = useState(null);
 
-  // Load token on mount (persistent login)
+  // Restore session on mount — but ONLY if user logged in this browser session
   useEffect(() => {
-    const savedToken = localStorage.getItem("authToken");
-    const savedUser = localStorage.getItem("authUser");
+    const shouldRestore = sessionStorage.getItem("isLoggedIn"); // 👈 flag check
+    if (!shouldRestore) return; // cold open = skip, force fresh login
 
-    if (savedToken) setToken(savedToken);
-    if (savedUser) setUser(JSON.parse(savedUser));
+    // Try to get a new access token using the refresh cookie
+    axios.post("/api/auth/refresh", {}, { withCredentials: true })
+      .then(res => {
+        setToken(res.data.accessToken);
+
+        const savedUser = sessionStorage.getItem("authUser"); // 👈 sessionStorage
+        if (savedUser) setUser(JSON.parse(savedUser));
+      })
+      .catch(() => {
+        // Refresh failed — clear everything and force login
+        sessionStorage.removeItem("isLoggedIn");
+        sessionStorage.removeItem("authUser");
+        setToken(null);
+        setUser(null);
+      });
   }, []);
 
-  // Login function
   const login = (tokenValue, userData = null) => {
     setToken(tokenValue);
-    localStorage.setItem("authToken", tokenValue);
+    sessionStorage.setItem("isLoggedIn", "true"); // 👈 set flag on login
 
     if (userData) {
       setUser(userData);
-      localStorage.setItem("authUser", JSON.stringify(userData));
+      sessionStorage.setItem("authUser", JSON.stringify(userData)); // 👈 sessionStorage
     }
   };
 
-  // Logout function
   const logout = () => {
     setToken(null);
     setUser(null);
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("authUser");
+    sessionStorage.removeItem("isLoggedIn");  // 👈 clear flag
+    sessionStorage.removeItem("authUser");    // 👈 sessionStorage
+    axios.post("/api/auth/logout", {}, { withCredentials: true }); // 👈 revoke server-side
   };
 
   const value = {
