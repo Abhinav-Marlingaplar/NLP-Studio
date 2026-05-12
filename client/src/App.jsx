@@ -16,12 +16,16 @@ import { useAuth } from "./context/AuthContext";
 import { Toaster } from "react-hot-toast";
 
 const App = () => {
-  const { token } = useAuth();
+  const { token, loading } = useAuth(); // 👈 pull loading from context
 
-  // Route protector
   const ProtectedRoute = ({ children }) => {
-    const savedToken = localStorage.getItem("authToken");
-    if (!token && !savedToken) return <Navigate to="/" replace />; // redirect to landing page
+    // ✅ Wait for auth to resolve before making any decision
+    if (loading) return null; // or a spinner — just don't redirect yet
+
+    // ✅ Fixed: sessionStorage instead of localStorage
+    const isLoggedIn = sessionStorage.getItem("isLoggedIn");
+    if (!token && !isLoggedIn) return <Navigate to="/" replace />;
+
     return children;
   };
 
@@ -66,19 +70,24 @@ const App = () => {
       />
 
       <Routes>
-
-        {/* ---------------- PUBLIC ROUTES ---------------- */}
+        {/* PUBLIC ROUTES */}
         <Route path="/" element={<Landing />} />
         <Route
           path="/login"
-          element={token ? <Navigate to="/app/dashboard" /> : <Login />}
+          element={
+            loading ? null : // 👈 don't redirect while loading
+              token ? <Navigate to="/app/dashboard" /> : <Login />
+          }
         />
         <Route
           path="/register"
-          element={token ? <Navigate to="/app/dashboard" /> : <Register />}
+          element={
+            loading ? null : // 👈 same here
+              token ? <Navigate to="/app/dashboard" /> : <Register />
+          }
         />
 
-        {/* ---------------- PROTECTED ROUTES (LAYOUT) ---------------- */}
+        {/* PROTECTED ROUTES */}
         <Route
           path="/app"
           element={
@@ -87,23 +96,15 @@ const App = () => {
             </ProtectedRoute>
           }
         >
-
-          {/* DEFAULT PAGE INSIDE LAYOUT */}
           <Route index element={<Dashboard />} />
-
-          {/* USER PAGES */}
           <Route path="dashboard" element={<Dashboard />} />
-
-          {/* NLP SERVICES */}
           <Route path="chatbot" element={<Chatbot />} />
           <Route path="paraphraser" element={<Paraphraser />} />
           <Route path="analytics" element={<Analytics />} />
         </Route>
 
-        {/* ---------------- NOT FOUND → REDIRECT ---------------- */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
-
     </div>
   );
 };
