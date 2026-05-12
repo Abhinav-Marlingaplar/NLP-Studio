@@ -27,24 +27,32 @@ export const addHistory = async (req, res, next) => {
 };
 
 /**
- * Get most recent services used (one per type)
+ * Get most recent history entries for the logged-in user
  */
 export const getHistory = async (req, res, next) => {
   try {
     const userId = new mongoose.Types.ObjectId(req.userId);
 
     const history = await History.aggregate([
-      // 1️ Match user
+      // 1. Match only this user's history
       { $match: { userId } },
 
-      // 2️ Sort newest first
+      // 2. Sort newest first (single sort — duplicate removed)
       { $sort: { createdAt: -1 } },
 
-      // 3 Sort services by most recent usage
-      { $sort: { createdAt: -1 } },
+      // 3. Limit to last 10 entries
+      { $limit: 10 },
 
-      // 4 Limit number of services shown
-      { $limit: 5 }
+      // 4. Return only the fields the frontend needs
+      {
+        $project: {
+          type: 1,
+          input: 1,
+          output: 1,
+          sessionId: 1,
+          createdAt: 1
+        }
+      }
     ]);
 
     res.json({ history });

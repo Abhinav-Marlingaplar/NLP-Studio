@@ -40,7 +40,7 @@ const toolCards = [
 
 const routeMap = { rag: "/app/chatbot", chat: "/app/chatbot", paraphrase: "/app/paraphraser", analyze: "/app/analytics" };
 const labelMap = { rag: "AI Chatbot", chat: "AI Chatbot", paraphrase: "Paraphraser", analyze: "Text Analytics" };
-const iconMap  = { rag: "◈", chat: "◈", paraphrase: "◇", analyze: "◉" };
+const iconMap = { rag: "◈", chat: "◈", paraphrase: "◇", analyze: "◉" };
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -60,7 +60,7 @@ const Dashboard = () => {
 
   return (
     <motion.div initial="hidden" animate="visible" variants={stagger}
-                style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      style={{ fontFamily: "'DM Sans', sans-serif" }}>
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@700;800&display=swap');
@@ -130,8 +130,8 @@ const Dashboard = () => {
         </div>
 
         <button onClick={handleBackHome}
-                className="px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-0.5"
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}>
+          className="px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-0.5"
+          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}>
           Sign Out
         </button>
       </motion.div>
@@ -140,15 +140,15 @@ const Dashboard = () => {
       <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
         {toolCards.map((item, i) => (
           <motion.button key={i} onClick={() => navigate(item.to)}
-                         whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}
-                         className="tool-card">
+            whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}
+            className="tool-card">
             <div className="flex items-start justify-between mb-5">
               <div className="w-11 h-11 rounded-xl flex items-center justify-center text-lg"
-                   style={{ background: 'rgba(245,200,66,0.1)', border: '1px solid rgba(245,200,66,0.2)', color: '#F5C842' }}>
+                style={{ background: 'rgba(245,200,66,0.1)', border: '1px solid rgba(245,200,66,0.2)', color: '#F5C842' }}>
                 {item.icon}
               </div>
               <span className="text-[10px] font-semibold tracking-widest uppercase px-2.5 py-1 rounded-full"
-                    style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.08)' }}>
                 {item.tag}
               </span>
             </div>
@@ -169,7 +169,7 @@ const Dashboard = () => {
           <h2 className="text-base font-semibold" style={{ color: 'rgba(255,255,255,0.8)' }}>Recent Activity</h2>
           {history.length > 0 && (
             <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                  style={{ background: 'rgba(245,200,66,0.1)', color: '#F5C842', border: '1px solid rgba(245,200,66,0.2)' }}>
+              style={{ background: 'rgba(245,200,66,0.1)', color: '#F5C842', border: '1px solid rgba(245,200,66,0.2)' }}>
               {history.length}
             </span>
           )}
@@ -177,7 +177,7 @@ const Dashboard = () => {
 
         {history.length === 0 ? (
           <div className="rounded-xl p-8 text-center"
-               style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
             <p className="text-sm font-light" style={{ color: 'rgba(255,255,255,0.3)' }}>
               No recent activity yet. Use a tool to get started.
             </p>
@@ -186,9 +186,9 @@ const Dashboard = () => {
           <div className="space-y-2">
             {history.map((item, i) => (
               <motion.button key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                             transition={{ delay: i * 0.04 }}
-                             onClick={() => navigate(routeMap[item.type])}
-                             className="history-item">
+                transition={{ delay: i * 0.04 }}
+                onClick={() => navigate(`${routeMap[item.type]}?sessionId=${item.sessionId}`)} // 👈 changed
+                className="history-item">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="text-sm shrink-0" style={{ color: '#F5C842' }}>
