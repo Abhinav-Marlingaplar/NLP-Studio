@@ -9,7 +9,7 @@ const RAG_TTL = 3600;    // 1 hour
 /**
  * Returns a cached embedding or computes + caches a new one.
  */
-const getCachedEmbedding = async (text) => {
+const getCachedEmbedding = async (text, sessionId) => {
   const key = `embed:${sessionId}:${text}`;
   try {
     const cached = await redis.get(key);
@@ -45,10 +45,10 @@ export const ragChat = async ({ message, sessionId, userId }) => {
   } catch (_) { /* non-fatal */ }
 
   // 2. Embed query
-  const queryEmbedding = await getCachedEmbedding(message);
+  const queryEmbedding = await getCachedEmbedding(message, sessionId);
 
   // 3. Vector retrieval
-  const docs = await queryVectorsGrouped(queryEmbedding, sessionId);
+  const docs = await queryVectorsGrouped(queryEmbedding, sessionId, userId);
 
   if (!docs.length) {
     return {
