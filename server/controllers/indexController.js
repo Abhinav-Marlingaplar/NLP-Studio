@@ -45,7 +45,7 @@ export const uploadAndIndex = [
         const indexed = await indexDocumentText(text, {
           filename: file.originalname,
           sessionId
-        });
+        }, req.userId);
 
         results.push({
           filename: file.originalname,
