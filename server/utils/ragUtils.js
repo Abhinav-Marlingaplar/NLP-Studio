@@ -19,7 +19,9 @@ export const indexDocumentText = async (text, metadata, userId) => {
     id: uuidv4(),
     doc_id: docId,
     content: chunk,
-    metadata: { ...metadata, doc_id: docId, user_id: userId },
+    metadata: { ...metadata, doc_id: docId },  // ✅ clean — no user_id inside
+    user_id: userId,                            // ✅ top-level column
+    session_id: metadata.sessionId,             // ✅ top-level column
     embedding: embeddings[i]
   }));
 
