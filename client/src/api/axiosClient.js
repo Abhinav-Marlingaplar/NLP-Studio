@@ -8,7 +8,13 @@ const api = axios.create({
 // ---------- REQUEST INTERCEPTOR ----------
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("authToken");
+    // ✅ Read from sessionStorage instead of localStorage
+    // The token itself isn't stored — but we can get it from AuthContext
+    // via a helper. For now, use sessionStorage flag to know user is logged in
+    // and rely on the response interceptor to refresh if 401 hits.
+    
+    // ✅ Get token from the module-level getter we'll set from AuthContext
+    const token = getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -16,6 +22,13 @@ api.interceptors.request.use(
   },
   (error) => Promise.reject(error)
 );
+
+// ✅ Module-level token store — set by AuthContext after login/refresh
+// This keeps the token in memory only, never in any storage
+let _accessToken = null;
+
+export const setAccessToken = (token) => { _accessToken = token; };
+export const getAccessToken = () => _accessToken;
 
 let isRefreshing = false;
 let refreshQueue = [];
@@ -47,10 +60,10 @@ api.interceptors.response.use(
 
       try {
         const refreshResponse = await api.post("/auth/refresh");
-
         const newToken = refreshResponse.data.accessToken;
 
-        localStorage.setItem("authToken", newToken);
+        // ✅ Store in memory only, not localStorage
+        setAccessToken(newToken);
 
         refreshQueue.forEach((p) => p.resolve(newToken));
         refreshQueue = [];
@@ -64,8 +77,11 @@ api.interceptors.response.use(
         refreshQueue = [];
         isRefreshing = false;
 
-        localStorage.removeItem("authToken");
-        window.location.href = "/login";
+        // ✅ Clear sessionStorage and redirect to landing, not /login
+        setAccessToken(null);
+        sessionStorage.removeItem("isLoggedIn");
+        sessionStorage.removeItem("authUser");
+        window.location.href = "/";
         return Promise.reject(refreshError);
       }
     }

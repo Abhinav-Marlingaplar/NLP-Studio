@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
+import { setAccessToken } from "../api/axiosClient"; // 👈 import
 
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
@@ -24,6 +25,7 @@ export const AuthProvider = ({ children }) => {
     )
       .then(res => {
         setToken(res.data.accessToken);
+        setAccessToken(res.data.accessToken); // 👈 set in axiosClient memory
         const savedUser = sessionStorage.getItem("authUser");
         if (savedUser) setUser(JSON.parse(savedUser));
       })
@@ -31,13 +33,14 @@ export const AuthProvider = ({ children }) => {
         sessionStorage.removeItem("isLoggedIn");
         sessionStorage.removeItem("authUser");
         setToken(null);
-        setUser(null);
+        setAccessToken(null); // 👈 clear in axiosClient memory
       })
       .finally(() => setLoading(false));
   }, []);
 
   const login = (tokenValue, userData = null) => {
     setToken(tokenValue);
+    setAccessToken(tokenValue); // 👈 set in axiosClient memory
     sessionStorage.setItem("isLoggedIn", "true");
     if (userData) {
       setUser(userData);
@@ -47,6 +50,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setToken(null);
+    setAccessToken(null); // 👈 clear in axiosClient memory
     setUser(null);
     sessionStorage.removeItem("isLoggedIn");
     sessionStorage.removeItem("authUser");
@@ -57,15 +61,13 @@ export const AuthProvider = ({ children }) => {
     );
   };
 
-  // ✅ REMOVED the early null return — always render the Provider
-  // ✅ ADDED loading to the value object so App.jsx can read it
   const value = {
     token,
     user,
     login,
     logout,
     isAuthenticated: !!token,
-    loading,  // 👈 this was missing
+    loading,
   };
 
   return (
