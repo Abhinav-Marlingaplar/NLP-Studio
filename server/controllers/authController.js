@@ -36,10 +36,11 @@ export const login = async (req, res, next) => {
     user.refreshToken = refreshToken;
     await user.save();
 
+    // ✅ Fix
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: true,
+      sameSite: "None",
     });
 
     res.json({
@@ -85,8 +86,13 @@ export const me = async (req, res, next) => {
 export const logout = async (req, res, next) => {
   try {
     await User.findByIdAndUpdate(req.userId, { refreshToken: null });
-    
-    res.clearCookie("refreshToken");
+
+    // ✅ clearCookie must have same options as setCookie
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+    });
     res.json({ message: "Logged out successfully" });
   } catch (err) {
     next(err);
