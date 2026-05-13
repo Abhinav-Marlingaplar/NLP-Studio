@@ -1,8 +1,7 @@
-import  supabase  from "./supabaseClient.js";
+import supabase from "./supabaseClient.js";
 import { getEmbeddings } from "./embeddings.js";
 import { v4 as uuidv4 } from "uuid";
 
-// ultra-light chunker
 export const chunkText = (text, size = 700) => {
   const chunks = [];
   for (let i = 0; i < text.length; i += size) {
@@ -11,7 +10,7 @@ export const chunkText = (text, size = 700) => {
   return chunks;
 };
 
-export const indexDocumentText = async (text, metadata) => {
+export const indexDocumentText = async (text, metadata, userId) => {
   const docId = uuidv4();
   const chunks = chunkText(text);
   const embeddings = await getEmbeddings(chunks);
@@ -20,8 +19,7 @@ export const indexDocumentText = async (text, metadata) => {
     id: uuidv4(),
     doc_id: docId,
     content: chunk,
-    metadata: { ...metadata, doc_id: docId },
-    user_id: userId,
+    metadata: { ...metadata, doc_id: docId, user_id: userId },
     embedding: embeddings[i]
   }));
 
@@ -31,7 +29,7 @@ export const indexDocumentText = async (text, metadata) => {
   return { docId, chunks: rows.length };
 };
 
-export const queryVectorsGrouped = async (queryEmbedding, sessionId, topK = 5) => {
+export const queryVectorsGrouped = async (queryEmbedding, sessionId, userId, topK = 5) => {
   const { data, error } = await supabase.rpc("match_documents", {
     query_embedding: queryEmbedding,
     match_count: topK,
