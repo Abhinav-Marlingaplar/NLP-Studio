@@ -8,18 +8,94 @@ import { sendChatMessage } from "../../api/chat";
 import { uploadFilesForIndexing } from "../../api/upload";
 import InputBox from "../../components/InputBox";
 import FileUpload from "../../components/FileUpload";
-import Loading from "../../components/Loading";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0 },
 };
 
+// Expandable citation card component
+const CitationCard = ({ citation }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div
+      onClick={() => setExpanded(prev => !prev)}
+      style={{
+        marginTop: 6,
+        borderRadius: 8,
+        border: '1px solid rgba(245,200,66,0.12)',
+        background: 'rgba(245,200,66,0.04)',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        overflow: 'hidden'
+      }}>
+
+      {/* Citation header — always visible */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '6px 10px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            padding: '2px 6px',
+            borderRadius: 4,
+            background: 'rgba(245,200,66,0.15)',
+            color: '#F5C842',
+          }}>
+            [{citation.ref}]
+          </span>
+          <span style={{
+            fontSize: 10,
+            color: 'rgba(255,255,255,0.5)',
+            fontWeight: 500,
+          }}>
+            {citation.filename}
+          </span>
+        </div>
+        <span style={{
+          fontSize: 9,
+          color: 'rgba(255,255,255,0.25)',
+          letterSpacing: '0.05em',
+        }}>
+          {expanded ? 'hide' : 'show excerpt'}
+        </span>
+      </div>
+
+      {/* Excerpt — visible only when expanded */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              padding: '0 10px 10px',
+              fontSize: 11,
+              lineHeight: 1.6,
+              color: 'rgba(255,255,255,0.4)',
+              borderTop: '1px solid rgba(255,255,255,0.04)',
+              fontStyle: 'italic',
+            }}>
+            "{citation.excerpt}"
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 const RAG_Chatbot = () => {
   const location = useLocation();
   const { user } = useAuth();
   const userId = user?.id;
-  const chatEndRef = useRef(null); // 👈 auto-scroll to latest message
+  const chatEndRef = useRef(null);
 
   const [messages, setMessages] = useState([]);
   const [sessionId, setSessionId] = useState(null);
@@ -27,7 +103,7 @@ const RAG_Chatbot = () => {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [turnCount, setTurnCount] = useState(0); // 👈 track conversation turns
+  const [turnCount, setTurnCount] = useState(0);
 
   const SESSION_KEY = useMemo(() => userId ? `rag_session_id_${userId}` : null, [userId]);
 
@@ -55,12 +131,10 @@ const RAG_Chatbot = () => {
     if (saved) {
       const parsed = JSON.parse(saved);
       setMessages(parsed);
-      // Restore turn count from saved messages
       setTurnCount(parsed.filter(m => m.sender === "user").length);
     }
   }, [LS_MESSAGES]);
 
-  // ✅ Auto-scroll to latest message
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
@@ -86,7 +160,7 @@ const RAG_Chatbot = () => {
 
   const handleSendMessage = async () => {
     if (!input.trim()) return toast.error("Please enter a message");
-    if (uploading) return toast.loading("Indexing in progress…");
+    if (uploading) return toast.loading("Indexing in progress...");
     if (!sessionId) return toast.error("Upload documents first");
 
     const userText = input;
@@ -99,11 +173,12 @@ const RAG_Chatbot = () => {
       appendMessage({
         sender: "ai",
         text: res.reply,
-        sources: res.sources || []  // 👈 attach sources to message
+        sources: res.sources || [],
+        citations: res.citations || []
       });
-      setTurnCount(prev => prev + 1); // 👈 increment turn counter
+      setTurnCount(prev => prev + 1);
     } catch {
-      appendMessage({ sender: "ai", text: "Error contacting chatbot.", sources: [] });
+      appendMessage({ sender: "ai", text: "Error contacting chatbot.", sources: [], citations: [] });
     }
     setLoading(false);
   };
@@ -111,7 +186,7 @@ const RAG_Chatbot = () => {
   const handleFilesSelect = async (files) => {
     if (!files?.length) return;
     setUploading(true);
-    toast.loading("Uploading & indexing…", { id: "upload" });
+    toast.loading("Uploading & indexing...", { id: "upload" });
     appendMessage({ sender: "system", text: `Uploading ${files.length} document(s)...` });
 
     try {
@@ -220,6 +295,7 @@ const RAG_Chatbot = () => {
           transition: all 0.2s ease; font-family: 'DM Sans', sans-serif;
         }
         .action-btn-secondary:hover { background: rgba(255,255,255,0.08); color: white; }
+        .citation-card:hover { border-color: rgba(245,200,66,0.25) !important; background: rgba(245,200,66,0.07) !important; }
       `}</style>
 
       {/* HEADER */}
@@ -230,7 +306,6 @@ const RAG_Chatbot = () => {
           <h2 className="font-display text-2xl font-bold gold-text">AI Chatbot</h2>
         </div>
         <div className="flex items-center gap-3">
-          {/* ✅ Memory indicator — shows user context is being retained */}
           {turnCount > 0 && (
             <div className="memory-badge">
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#F5C842', display: 'inline-block' }} />
@@ -240,7 +315,7 @@ const RAG_Chatbot = () => {
           <Link to="/app/dashboard"
                 className="px-4 py-2 rounded-lg text-xs font-medium transition-all hover:-translate-y-0.5"
                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}>
-            ← Dashboard
+            Dashboard
           </Link>
         </div>
       </div>
@@ -262,7 +337,7 @@ const RAG_Chatbot = () => {
         </div>
       )}
 
-      {/* ✅ Custom chat renderer replacing OutputBox */}
+      {/* CHAT */}
       <div className="flex-grow overflow-y-auto mt-5 space-y-3 pr-1">
         <AnimatePresence initial={false}>
           {messages.map((msg, i) => (
@@ -270,9 +345,12 @@ const RAG_Chatbot = () => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.2 }}
-                        className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : msg.sender === 'system' ? 'items-center' : 'items-start'}`}>
+                        className={`flex flex-col ${
+                          msg.sender === 'user' ? 'items-end' :
+                          msg.sender === 'system' ? 'items-center' :
+                          'items-start'
+                        }`}>
 
-              {/* Sender label */}
               {msg.sender !== 'system' && (
                 <span className="text-[10px] font-semibold tracking-widest uppercase mb-1 px-1"
                       style={{ color: msg.sender === 'user' ? 'rgba(245,200,66,0.5)' : 'rgba(255,255,255,0.25)' }}>
@@ -280,7 +358,6 @@ const RAG_Chatbot = () => {
                 </span>
               )}
 
-              {/* Bubble */}
               <div className={
                 msg.sender === 'user' ? 'chat-bubble-user' :
                 msg.sender === 'system' ? 'chat-bubble-system' :
@@ -288,7 +365,7 @@ const RAG_Chatbot = () => {
               }>
                 {msg.text}
 
-                {/* ✅ Source tags under AI messages */}
+                {/* Source filename tags */}
                 {msg.sender === 'ai' && msg.sources?.length > 0 && (
                   <div className="flex flex-wrap mt-2">
                     {msg.sources.map((src, j) => (
@@ -298,17 +375,36 @@ const RAG_Chatbot = () => {
                     ))}
                   </div>
                 )}
+
+                {/* Citation cards — expandable excerpts */}
+                {msg.sender === 'ai' && msg.citations?.length > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <p style={{
+                      fontSize: 9,
+                      fontWeight: 600,
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                      color: 'rgba(255,255,255,0.2)',
+                      marginBottom: 6
+                    }}>
+                      Sources used
+                    </p>
+                    {msg.citations.map((citation, j) => (
+                      <CitationCard key={j} citation={citation} />
+                    ))}
+                  </div>
+                )}
               </div>
             </motion.div>
           ))}
         </AnimatePresence>
 
-        {/* Loading indicator */}
+        {/* Thinking indicator */}
         {(loading || uploading) && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                      className="flex items-start gap-2">
+                      className="flex items-start">
             <div className="chat-bubble-ai flex items-center gap-2">
-              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Thinking</span>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>Thinking</span>
               <div className="flex gap-1">
                 {[0, 1, 2].map(i => (
                   <motion.span key={i}
@@ -321,13 +417,12 @@ const RAG_Chatbot = () => {
           </motion.div>
         )}
 
-        {/* Auto-scroll anchor */}
         <div ref={chatEndRef} />
       </div>
 
       <InputBox value={input} onChange={setInput} onSubmit={handleSendMessage}
                 disabled={loading || uploading || !sessionId}
-                placeholder="Ask a question about your documents…" />
+                placeholder="Ask a question about your documents..." />
 
       <div className="flex gap-2 mt-3">
         <button onClick={handleSendMessage} className="action-btn-primary"

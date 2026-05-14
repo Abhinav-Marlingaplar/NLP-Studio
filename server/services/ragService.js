@@ -5,8 +5,8 @@ import redis from "../config/redis.js";
 
 const EMBED_TTL = 86400;
 const RAG_TTL = 3600;
-const HISTORY_TTL = 3600;     // 1 hour — same as RAG cache
-const MAX_HISTORY = 10;        // last 10 exchanges = 20 messages
+const HISTORY_TTL = 3600;
+const MAX_HISTORY = 10;
 
 const getCachedEmbedding = async (text, sessionId) => {
   const key = `embed:${sessionId}:${text}`;
@@ -24,7 +24,6 @@ const getCachedEmbedding = async (text, sessionId) => {
   return embedding;
 };
 
-// ✅ Fetch conversation history from Redis
 const getHistory = async (sessionId, userId) => {
   try {
     const key = `history:${userId}:${sessionId}`;
@@ -35,7 +34,6 @@ const getHistory = async (sessionId, userId) => {
   }
 };
 
-// ✅ Append a new exchange and persist to Redis
 const appendHistory = async (sessionId, userId, userMessage, aiReply) => {
   try {
     const key = `history:${userId}:${sessionId}`;
@@ -44,9 +42,7 @@ const appendHistory = async (sessionId, userId, userMessage, aiReply) => {
     history.push({ role: "user", content: userMessage });
     history.push({ role: "assistant", content: aiReply });
 
-    // Keep only last MAX_HISTORY exchanges to avoid token overflow
     const trimmed = history.slice(-MAX_HISTORY * 2);
-
     await redis.set(key, JSON.stringify(trimmed), "EX", HISTORY_TTL);
   } catch (_) {}
 };
@@ -55,30 +51,40 @@ export const ragChat = async ({ message, sessionId, userId }) => {
   if (!sessionId) {
     return {
       reply: "No documents are attached in this session. Please upload PDFs before asking questions.",
-      sources: []
+      sources: [],
+      citations: []
     };
   }
 
-  // ✅ Cache key includes message only — history is fetched separately
-  // Don't cache responses that depend on history since context changes each turn
   const queryEmbedding = await getCachedEmbedding(message, sessionId);
   const docs = await queryVectorsGrouped(queryEmbedding, sessionId, userId);
 
   if (!docs.length) {
     return {
       reply: "The uploaded documents do not contain information related to your question.",
-      sources: []
+      sources: [],
+      citations: []
     };
   }
 
-  const context = docs
-    .map(d =>
-      `Document: ${d.filename}\n` +
-      d.chunks.map(c => c.content).join("\n")
-    )
+  // Build numbered context — each chunk gets a reference number
+  // Format: [1] filename \n chunk content
+  const numberedChunks = [];
+  docs.forEach(d => {
+    d.chunks.forEach(c => {
+      numberedChunks.push({
+        ref: numberedChunks.length + 1,
+        filename: d.filename,
+        content: c.content,
+        score: c.score
+      });
+    });
+  });
+
+  const context = numberedChunks
+    .map(c => `[${c.ref}] ${c.filename}\n${c.content}`)
     .join("\n\n");
 
-  // ✅ Fetch conversation history for this session
   const conversationHistory = await getHistory(sessionId, userId);
 
   const groq = getGroqClient();
@@ -88,15 +94,18 @@ export const ragChat = async ({ message, sessionId, userId }) => {
     messages: [
       {
         role: "system",
-        content: `You are a document assistant. Answer ONLY using the provided documents. 
-If the answer is not in the documents, say you don't know. 
-Be concise but complete. Maintain context from the conversation history.`
+        content: `You are a document assistant. Answer ONLY using the provided documents.
+If the answer is not in the documents, say you don't know.
+Be concise but complete. Maintain context from the conversation history.
+Each document chunk is labeled with a reference number like [1], [2], etc.
+At the end of your answer, on a new line, write CITATIONS: followed by the reference numbers you used, comma separated.
+Example: CITATIONS: 1, 3, 5`
       },
       {
         role: "system",
         content: "Document Context:\n" + context
       },
-      ...conversationHistory,   // ✅ inject prior turns
+      ...conversationHistory,
       {
         role: "user",
         content: message
@@ -104,18 +113,38 @@ Be concise but complete. Maintain context from the conversation history.`
     ]
   });
 
-  const reply = completion.choices[0].message.content;
+  const raw = completion.choices[0].message.content;
 
-  // ✅ Persist this exchange to history
+  // Parse reply and citation line apart
+  const citationMatch = raw.match(/CITATIONS:\s*([\d,\s]+)$/im);
+  const reply = raw.replace(/CITATIONS:\s*[\d,\s]+$/im, "").trim();
+
+  // Map cited reference numbers back to chunk metadata
+  const citations = [];
+  if (citationMatch) {
+    const refs = citationMatch[1]
+      .split(",")
+      .map(r => parseInt(r.trim()))
+      .filter(r => !isNaN(r));
+
+    refs.forEach(ref => {
+      const chunk = numberedChunks.find(c => c.ref === ref);
+      if (chunk) {
+        citations.push({
+          ref,
+          filename: chunk.filename,
+          // Return first 200 chars of the chunk as the excerpt
+          excerpt: chunk.content.slice(0, 200).trim() + (chunk.content.length > 200 ? "..." : ""),
+          score: chunk.score
+        });
+      }
+    });
+  }
+
   await appendHistory(sessionId, userId, message, reply);
 
-  const result = {
-    reply,
-    sources: docs.map(d => d.filename)
-  };
+  const result = { reply, sources: docs.map(d => d.filename), citations };
 
-  // Cache single-turn responses that don't depend on history
-  // Only cache if this is the first message (no prior history)
   if (conversationHistory.length === 0) {
     try {
       const cacheKey = `rag:${userId}:${sessionId}:${message}`;
