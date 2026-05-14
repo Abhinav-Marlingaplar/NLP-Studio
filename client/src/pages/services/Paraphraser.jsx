@@ -1,11 +1,9 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { paraphraseText } from "../../api/paraphraser";
-import { useAuth } from "../../context/AuthContext";   // 👈 added
+import { useAuth } from "../../context/AuthContext";
 import InputBox from "../../components/InputBox";
-import OutputBox from "../../components/OutputBox";
-import Loading from "../../components/Loading";
 import { toast } from "react-hot-toast";
 
 const fadeUp = {
@@ -13,57 +11,209 @@ const fadeUp = {
   visible: { opacity: 1, y: 0 },
 };
 
-const Paraphraser = () => {
-  const { user } = useAuth();                          // 👈 added
-  const userId = user?.id;                             // 👈 added
+// Single variant card with copy button
+const VariantCard = ({ variant, index, selected, onSelect }) => {
+  const [copied, setCopied] = useState(false);
 
-  const [messages, setMessages] = useState([]);
+  const handleCopy = (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(variant.text);
+    setCopied(true);
+    toast.success("Copied to clipboard");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.08 }}
+      onClick={() => onSelect(index)}
+      style={{
+        borderRadius: 12,
+        border: selected
+          ? '1px solid rgba(245,200,66,0.4)'
+          : '1px solid rgba(255,255,255,0.07)',
+        background: selected
+          ? 'rgba(245,200,66,0.06)'
+          : 'rgba(255,255,255,0.02)',
+        padding: '14px 16px',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        marginBottom: 8,
+      }}>
+
+      {/* Card header */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 10
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Variant number badge */}
+          <span style={{
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: '0.1em',
+            padding: '2px 7px',
+            borderRadius: 4,
+            background: selected ? 'rgba(245,200,66,0.2)' : 'rgba(255,255,255,0.06)',
+            color: selected ? '#F5C842' : 'rgba(255,255,255,0.3)',
+          }}>
+            {index + 1}
+          </span>
+          {/* Variant label */}
+          <span style={{
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: selected ? 'rgba(245,200,66,0.8)' : 'rgba(255,255,255,0.3)',
+          }}>
+            {variant.label}
+          </span>
+        </div>
+
+        {/* Copy button */}
+        <button
+          onClick={handleCopy}
+          style={{
+            fontSize: 10,
+            padding: '3px 10px',
+            borderRadius: 6,
+            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'rgba(255,255,255,0.04)',
+            color: copied ? '#F5C842' : 'rgba(255,255,255,0.35)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            fontFamily: "'DM Sans', sans-serif",
+          }}>
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+
+      {/* Variant text */}
+      <p style={{
+        fontSize: 13,
+        lineHeight: 1.7,
+        color: 'rgba(255,255,255,0.8)',
+        margin: 0,
+      }}>
+        {variant.text}
+      </p>
+    </motion.div>
+  );
+};
+
+// Single history entry — shows original + its variants
+const HistoryEntry = ({ entry }) => {
+  const [selectedVariant, setSelectedVariant] = useState(0);
+
+  return (
+    <div style={{ marginBottom: 24 }}>
+      {/* Original text */}
+      <div style={{
+        borderRadius: 12,
+        border: '1px solid rgba(245,200,66,0.15)',
+        background: 'rgba(245,200,66,0.04)',
+        padding: '12px 16px',
+        marginBottom: 10,
+      }}>
+        <p style={{
+          fontSize: 9,
+          fontWeight: 700,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: 'rgba(245,200,66,0.5)',
+          marginBottom: 6,
+        }}>
+          Original
+        </p>
+        <p style={{
+          fontSize: 13,
+          lineHeight: 1.6,
+          color: 'rgba(255,255,255,0.6)',
+          margin: 0,
+        }}>
+          {entry.original}
+        </p>
+      </div>
+
+      {/* Variants label */}
+      <p style={{
+        fontSize: 9,
+        fontWeight: 700,
+        letterSpacing: '0.12em',
+        textTransform: 'uppercase',
+        color: 'rgba(255,255,255,0.2)',
+        marginBottom: 8,
+        paddingLeft: 4,
+      }}>
+        Variants — click to select
+      </p>
+
+      {/* Variant cards */}
+      {entry.variants.map((v, i) => (
+        <VariantCard
+          key={i}
+          variant={v}
+          index={i}
+          selected={selectedVariant === i}
+          onSelect={setSelectedVariant}
+        />
+      ))}
+    </div>
+  );
+};
+
+const Paraphraser = () => {
+  const { user } = useAuth();
+  const userId = user?.id;
+
+  const [history, setHistory] = useState([]); // array of { original, variants }
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [tone, setTone] = useState("professional");
   const [length, setLength] = useState("same");
   const [creativity, setCreativity] = useState(0.3);
 
-  // ✅ Key scoped to userId — different users never share messages
-  const LS_MESSAGES = useMemo(
-    () => userId ? `paraphraser_messages_${userId}` : null,
+  const LS_KEY = useMemo(
+    () => userId ? `paraphraser_history_${userId}` : null,
     [userId]
   );
 
   useEffect(() => {
-    if (!LS_MESSAGES) return;
-    // ✅ Only load if userId is known — never load on cold/unauthenticated open
-    const saved = localStorage.getItem(LS_MESSAGES);
-    if (saved) setMessages(JSON.parse(saved));
-  }, [LS_MESSAGES]);
+    if (!LS_KEY) return;
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) setHistory(JSON.parse(saved));
+  }, [LS_KEY]);
 
-  const appendMessage = (msg) => {
-    setMessages(prev => {
-      const next = [...prev, msg];
-      if (LS_MESSAGES) localStorage.setItem(LS_MESSAGES, JSON.stringify(next));
-      return next;
-    });
+  const saveHistory = (updated) => {
+    if (LS_KEY) localStorage.setItem(LS_KEY, JSON.stringify(updated));
   };
 
   const reset = () => {
-    setMessages([]);
-    if (LS_MESSAGES) localStorage.removeItem(LS_MESSAGES);  // ✅ only clears this user's data
-    toast.success("Session reset");
+    setHistory([]);
+    if (LS_KEY) localStorage.removeItem(LS_KEY);
+    toast.success("Session cleared");
   };
 
   const handleParaphrase = async () => {
     if (!input.trim()) { toast.error("Please enter text to paraphrase"); return; }
     const userText = input;
     setInput("");
-    appendMessage({ sender: "user", text: userText });
     setLoading(true);
 
     try {
       const res = await paraphraseText({ text: userText, tone, length, creativity });
-      appendMessage({ sender: "ai", text: res.output });
-      toast.success("Paraphrase generated");
+
+      const entry = { original: userText, variants: res.variants };
+      const updated = [entry, ...history]; // newest first
+      setHistory(updated);
+      saveHistory(updated);
+      toast.success("3 variants generated");
     } catch {
-      appendMessage({ sender: "ai", text: "Error generating paraphrase." });
       toast.error("Failed to generate paraphrase");
     }
     setLoading(false);
@@ -111,30 +261,18 @@ const Paraphraser = () => {
         .control-select:focus { border-color: rgba(245,200,66,0.5); box-shadow: 0 0 0 3px rgba(245,200,66,0.08); }
         .control-select option { background: #1a1a1a; color: white; }
         .action-btn-primary {
-          flex: 1;
-          padding: 11px;
-          border-radius: 10px;
+          flex: 1; padding: 11px; border-radius: 10px;
           background: linear-gradient(135deg, #F5C842 0%, #E8A020 100%);
-          color: #080808;
-          font-weight: 600;
-          font-size: 13px;
-          border: none;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          font-family: 'DM Sans', sans-serif;
+          color: #080808; font-weight: 600; font-size: 13px; border: none;
+          cursor: pointer; transition: all 0.2s ease; font-family: 'DM Sans', sans-serif;
         }
         .action-btn-primary:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(245,200,66,0.25); }
         .action-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
         .action-btn-secondary {
-          padding: 11px 20px;
-          border-radius: 10px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.1);
-          color: rgba(255,255,255,0.6);
-          font-size: 13px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          font-family: 'DM Sans', sans-serif;
+          padding: 11px 20px; border-radius: 10px;
+          background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+          color: rgba(255,255,255,0.6); font-size: 13px; cursor: pointer;
+          transition: all 0.2s ease; font-family: 'DM Sans', sans-serif;
         }
         .action-btn-secondary:hover { background: rgba(255,255,255,0.08); color: white; }
         .creativity-track { -webkit-appearance: none; appearance: none; height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; outline: none; cursor: pointer; }
@@ -144,32 +282,32 @@ const Paraphraser = () => {
       {/* HEADER */}
       <div className="flex justify-between items-center mb-5">
         <div>
-          <p className="text-[10px] font-semibold tracking-[0.18em] uppercase mb-1" style={{ color: 'rgba(245,200,66,0.7)' }}>
-            Tool
-          </p>
+          <p className="text-[10px] font-semibold tracking-[0.18em] uppercase mb-1"
+             style={{ color: 'rgba(245,200,66,0.7)' }}>Tool</p>
           <h2 className="font-display text-2xl font-bold gold-text">Paraphraser</h2>
         </div>
         <Link to="/app/dashboard"
               className="px-4 py-2 rounded-lg text-xs font-medium transition-all hover:-translate-y-0.5"
               style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}>
-          ← Dashboard
+          Dashboard
         </Link>
       </div>
 
       <div className="h-px mb-5" style={{ background: 'rgba(255,255,255,0.06)' }} />
 
       <p className="text-xs leading-relaxed mb-5 font-light" style={{ color: 'rgba(255,255,255,0.45)' }}>
-        Rewrite text while preserving its original meaning. Control tone, length, and creativity
-        to suit different writing contexts and professional needs.
+        Rewrite text while preserving its original meaning. Each submission generates 3 structural
+        variants — click any card to select it, copy to use it.
       </p>
 
       {/* CONTROLS */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
-                  className="flex flex-wrap items-center gap-3 mb-6 p-4 rounded-xl"
+                  className="flex flex-wrap items-center gap-3 mb-5 p-4 rounded-xl"
                   style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
 
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.35)' }}>Tone</label>
+          <label className="text-[10px] font-semibold tracking-widest uppercase"
+                 style={{ color: 'rgba(255,255,255,0.35)' }}>Tone</label>
           <select value={tone} onChange={e => setTone(e.target.value)} className="control-select">
             <option value="neutral">Neutral</option>
             <option value="formal">Formal</option>
@@ -179,7 +317,8 @@ const Paraphraser = () => {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.35)' }}>Length</label>
+          <label className="text-[10px] font-semibold tracking-widest uppercase"
+                 style={{ color: 'rgba(255,255,255,0.35)' }}>Length</label>
           <select value={length} onChange={e => setLength(e.target.value)} className="control-select">
             <option value="same">Same</option>
             <option value="shorter">Shorter</option>
@@ -189,7 +328,8 @@ const Paraphraser = () => {
 
         <div className="flex flex-col gap-2 min-w-[160px]">
           <div className="flex justify-between items-center">
-            <label className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.35)' }}>Creativity</label>
+            <label className="text-[10px] font-semibold tracking-widest uppercase"
+                   style={{ color: 'rgba(255,255,255,0.35)' }}>Creativity</label>
             <span className="text-xs font-semibold" style={{ color: '#F5C842' }}>{creativity}</span>
           </div>
           <input type="range" min="0" max="1" step="0.1" value={creativity}
@@ -198,24 +338,65 @@ const Paraphraser = () => {
         </div>
       </motion.div>
 
-      {/* OUTPUT */}
-      <div className="flex-grow overflow-y-auto">
-        <OutputBox messages={messages} icon="◇" />
-        {loading && <Loading />}
-      </div>
-
       {/* INPUT */}
       <InputBox value={input} onChange={setInput} onSubmit={handleParaphrase}
                 placeholder="Enter text to paraphrase..." />
 
       {/* ACTIONS */}
-      <div className="flex gap-2 mt-3">
+      <div className="flex gap-2 mt-3 mb-5">
         <button onClick={handleParaphrase} disabled={loading} className="action-btn-primary">
-          Paraphrase
+          {loading ? "Generating variants..." : "Generate 3 Variants"}
         </button>
         <button onClick={reset} disabled={loading} className="action-btn-secondary">
-          Reset
+          Clear
         </button>
+      </div>
+
+      {/* LOADING */}
+      {loading && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="flex items-center gap-2 mb-4"
+                    style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(245,200,66,0.04)', border: '1px solid rgba(245,200,66,0.1)' }}>
+          <div className="flex gap-1">
+            {[0, 1, 2].map(i => (
+              <motion.span key={i}
+                           animate={{ opacity: [0.3, 1, 0.3] }}
+                           transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                           style={{ width: 4, height: 4, borderRadius: '50%', background: '#F5C842', display: 'inline-block' }} />
+            ))}
+          </div>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+            Generating 3 variants...
+          </span>
+        </motion.div>
+      )}
+
+      {/* HISTORY — newest entry first */}
+      <div className="flex-grow overflow-y-auto pr-1">
+        <AnimatePresence initial={false}>
+          {history.map((entry, i) => (
+            <motion.div key={i}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}>
+              <HistoryEntry entry={entry} />
+              {i < history.length - 1 && (
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.04)', marginBottom: 24 }} />
+              )}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+
+        {history.length === 0 && !loading && (
+          <div style={{
+            textAlign: 'center',
+            padding: '32px 0',
+            color: 'rgba(255,255,255,0.15)',
+            fontSize: 12,
+          }}>
+            Enter text above to generate variants
+          </div>
+        )}
       </div>
     </motion.div>
   );

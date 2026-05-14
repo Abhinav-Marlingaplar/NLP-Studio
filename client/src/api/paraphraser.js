@@ -8,5 +8,5 @@ export const paraphraseText = async ({ text, tone, length, creativity }) => {
     creativity
   });
 
-  return res.data; // { output }
+  return res.data; // { variants: [{ label, text }]  }
 };

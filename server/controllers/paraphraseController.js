@@ -20,11 +20,11 @@ export const handleParaphrase = async (req, res) => {
       type: "paraphrase",
       sessionId,
       input: text,
-      output: result,
+      output: result.variants.map(v => `${v.label}: ${v.text}`).join("\n\n"),
       meta: { tone, length, creativity }
     });
 
-    res.json({ output: result });
+    res.json({ variants: result.variants });
   } catch (err) {
     console.error("PARAPHRASE ERROR:", err);
     res.status(500).json({ error: err.message });
