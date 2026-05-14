@@ -21,13 +21,15 @@ Return ONLY valid JSON following this exact schema:
 
 {
   "overallSentiment": "Positive | Neutral | Negative | Mixed",
-  "confidence": number,
+  "confidence": number between 0 and 1,
+  "urgencyScore": number between 0 and 10,
+  "npsEstimate": number between -100 and 100,
   "summary": string,
   "aspects": [
     {
       "aspect": string,
       "sentiment": "Positive | Neutral | Negative",
-      "confidence": number,
+      "confidence": number between 0 and 1,
       "severity": "Low | Medium | High",
       "analysis": string
     }
@@ -54,11 +56,20 @@ Return ONLY valid JSON following this exact schema:
   "recommendations": [
     {
       "action": string,
-      "justification": string
+      "justification": string,
+      "priority": "High | Medium | Low",
+      "effort": "Low | Medium | High"
     }
   ],
   "evidence": [string]
 }
+
+Field definitions:
+- confidence: how certain the sentiment classification is (0 = uncertain, 1 = certain)
+- urgencyScore: how urgently this text needs attention or action (0 = no urgency, 10 = critical)
+- npsEstimate: estimated Net Promoter Score implied by the text (-100 = extremely negative, 100 = extremely positive)
+- recommendations[].priority: how important this action is relative to others
+- recommendations[].effort: how much work is required to implement this action
 
 Strict rules:
 - Output ONLY raw JSON (no markdown, no backticks).
