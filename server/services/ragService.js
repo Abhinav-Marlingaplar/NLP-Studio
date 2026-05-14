@@ -114,6 +114,7 @@ Example: CITATIONS: 1, 3, 5`
   });
 
   const raw = completion.choices[0].message.content;
+  console.log("RAW LLM RESPONSE:", raw);
 
   // Parse reply and citation line apart
   const citationMatch = raw.match(/CITATIONS:\s*([\d,\s]+)$/im);
